@@ -1,4 +1,5 @@
 import Navbar from "@/modules/home/ui/components/navbar";
+import { Footer } from "@/modules/home/ui/components/footer";
 
 interface Props {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ const Layout = ({ children }: Props) => {
       <div className="flex-1 flex flex-col">
         {children}
       </div>
+      <Footer />
     </main>
   );
 };

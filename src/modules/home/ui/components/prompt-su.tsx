@@ -6,7 +6,6 @@ import {
   SiClerk,
   SiCloudflare,
   SiDocker,
-  SiGithub,
   SiFirebase,
   SiNextdotjs,
   SiOpenai,
@@ -16,6 +15,7 @@ import {
   SiTrpc,
   SiPrisma,
 } from "react-icons/si";
+import { FiCodesandbox } from "react-icons/fi";
 import ShinyText from "@/components/ShinyText";
 
 const poweredBy = [
@@ -27,7 +27,7 @@ const poweredBy = [
   { name: "tRPC", tooltip: "tRPC — Type-safe APIs", icon: <SiTrpc /> },
   { name: "Cloudflare", tooltip: "Cloudflare — CDN & Security", icon: <SiCloudflare /> },
   { name: "Docker", tooltip: "Docker — Containers", icon: <SiDocker /> },
-  { name: "GitHub", tooltip: "GitHub — Code Hosting", icon: <SiGithub /> },
+  { name: "e2b", tooltip: "e2b — Code Hosting", icon: <FiCodesandbox /> },
   { name: "TailwindCSS", tooltip: "Tailwind CSS — Styling", icon: <SiTailwindcss /> },
   { name: "Postman", tooltip: "Postman — API Testing", icon: <SiPostman /> },
   { name: "Prisma", tooltip: "Prisma — Database ORM", icon: <SiPrisma /> },

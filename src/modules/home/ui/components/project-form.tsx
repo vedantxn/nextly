@@ -133,7 +133,7 @@ export const ProjectForm = () => {
             isFocused && "scale-[1.01] ring-2 ring-primary/40"
           )}
         >
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 relative">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 relative dark:text-white">
             <FormField
               control={form.control}
               name="value"

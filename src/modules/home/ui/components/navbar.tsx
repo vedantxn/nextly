@@ -27,8 +27,8 @@ export const Navbar = () => {
   }, []);
 
   const navItems = [
-    { name: "Projects", href: "/projects" },
     { name: "Pricing", href: "/pricing" },
+    { name: "Showcase", href: "/showcase" },
   ];
 
   const resources = [
