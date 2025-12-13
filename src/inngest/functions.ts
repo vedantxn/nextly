@@ -82,7 +82,7 @@ export const codeAgentFunction = inngest.createFunction(
       description: "An expert coding angent",
       system: PROMPT,
       model: openai({
-        model: chosenModel ?? "x-ai/grok-4-fast:free",
+        model: chosenModel ?? "openai/gpt-oss-120b:free",
         apiKey: process.env.OPENAI_API_KEY,
         baseUrl: process.env.OPENAI_API_BASE,
         defaultParameters: { temperature: 0.1 },
@@ -213,7 +213,7 @@ export const codeAgentFunction = inngest.createFunction(
       description: "A fragment title generator",
       system: FRAGMENT_TITLE_PROMPT,
       model: openai({
-        model: process.env.OPENAI_FREE2_MODEL ?? "x-ai/grok-4-fast:free",
+        model: process.env.OPENAI_FREE2_MODEL ?? "openai/gpt-oss-120b:free",
         apiKey: process.env.OPENAI_API_KEY,
         baseUrl: process.env.OPENAI_API_BASE,
         defaultParameters: { temperature: 0.1 },
@@ -225,7 +225,7 @@ export const codeAgentFunction = inngest.createFunction(
       description: "A response generator",
       system: RESPONSE_PROMPT,
       model: openai({
-        model: process.env.OPENAI_FREE2_MODEL ?? "x-ai/grok-4-fast:free",
+        model: process.env.OPENAI_FREE2_MODEL ?? "openai/gpt-oss-120b:free",
         apiKey: process.env.OPENAI_API_KEY,
         baseUrl: process.env.OPENAI_API_BASE,
         defaultParameters: { temperature: 0.1 },
