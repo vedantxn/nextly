@@ -104,7 +104,7 @@ describe("messagesRouter", () => {
       expect(mockMessageCreate).not.toHaveBeenCalled();
     });
 
-    it("creates message and dispatches inngest event", async () => {
+    it("creates message and starts a workflow run", async () => {
       mockProjectFindFirst.mockResolvedValue({ id: "p1", organizationId: "org-1" });
       const created = { id: "m-new", content: "Add dark mode", role: "USER" };
       mockMessageCreate.mockResolvedValue(created);

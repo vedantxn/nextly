@@ -1,6 +1,7 @@
 import { Sandbox } from "e2b";
-import { SANDBOX_TIMEOUT } from "@/inngest/types";
 import { SandboxAdapter, type SandboxFile, type SandboxReadResult } from "./types";
+
+const SANDBOX_TIMEOUT = 60_000 * 10 * 3;
 
 async function connectToSandbox(sandboxId: string) {
   const sandbox = await Sandbox.connect(sandboxId);

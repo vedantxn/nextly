@@ -7,7 +7,6 @@ const publicRoutes = [
   "/forgot-password",
   "/reset-password",
   "/pricing",
-  "/api/inngest",
   "/api/trpc",
   "/api/auth",
   "/terms",

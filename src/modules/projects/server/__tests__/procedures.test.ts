@@ -105,7 +105,7 @@ describe("projectsRouter", () => {
   describe("create", () => {
     const validInput = { value: "Build a todo app", model: "grok" as const };
 
-    it("creates project and dispatches inngest event", async () => {
+    it("creates project and starts a workflow run", async () => {
       const created = {
         id: "p-new",
         name: "cool-slug",
