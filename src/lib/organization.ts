@@ -26,7 +26,7 @@ export type AccessibleOrganization = {
   kind: string;
 };
 
-function slugifySegment(value: string) {
+export function normalizeOrganizationSlug(value: string) {
   return value
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -48,7 +48,7 @@ export function buildPersonalOrganizationName(name?: string | null, email?: stri
 }
 
 export async function generateUniqueOrganizationSlug(source: string) {
-  const baseSlug = slugifySegment(source) || "personal-organization";
+  const baseSlug = normalizeOrganizationSlug(source) || "personal-organization";
 
   for (let attempt = 1; attempt <= MAX_SLUG_ATTEMPTS; attempt += 1) {
     const suffix = attempt === 1 ? "" : `-${attempt}`;

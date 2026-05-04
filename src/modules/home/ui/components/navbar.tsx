@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { UserControl } from "@/components/user-control";
 import { useScroll } from "@/hooks/use-scroll";
 import { LightPullThemeSwitcher } from "@/components/21stdev/light-pull-theme-switcher";
+import { OrganizationSwitcher } from "@/modules/organizations/ui/components/organization-switcher";
 import { FiGithub } from "react-icons/fi";
 import { InteractiveHoverButton } from "@/components/21stdev/interactive-hover-button";
 import {
@@ -176,7 +177,10 @@ export const Navbar = () => {
       {/* Right side */}
       <div className="flex items-center ml-auto gap-2">
         {session?.user ? (
-          <UserControl />
+          <>
+            <OrganizationSwitcher />
+            <UserControl />
+          </>
         ) : (
           <a href="/sign-up">
             <InteractiveHoverButton text="Sign Up" />

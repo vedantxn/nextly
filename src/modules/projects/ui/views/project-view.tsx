@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EyeIcon, CodeIcon, Loader2, AlertCircle, RocketIcon, RefreshCcwIcon, ExternalLinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FileExplorer } from "@/components/file-explorer";
+import { OrganizationSwitcher } from "@/modules/organizations/ui/components/organization-switcher";
 import { UserControl } from "@/components/user-control";
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -157,6 +158,7 @@ export const ProjectView = ({ orgSlug, projectId }: Props) => {
                             )}
 
                             <div className="flex items-center gap-x-3 flex-shrink-0">
+                                <OrganizationSwitcher />
                                 <div className="transition-transform hover:scale-105">
                                     <UserControl />
                                 </div>
