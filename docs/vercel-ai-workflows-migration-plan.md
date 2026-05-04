@@ -4,7 +4,9 @@
 
 - Active migration plan.
 - Execution is in progress.
-- Background orchestration is moving from `Inngest + Agent Kit` to `Vercel Workflows + Vercel AI SDK`.
+- Phases 1 through 8 are implemented in the current branch.
+- Phase 9 is the cleanup and documentation pass.
+- Background orchestration has moved from `Inngest + Agent Kit` to `Vercel Workflows + Vercel AI SDK`.
 - Sandbox runtime is still `E2B` for now, but the migration is explicitly preparing for a later `Daytona` swap.
 
 ## Goal

@@ -17,10 +17,11 @@
 ![tRPC](https://img.shields.io/badge/tRPC-2596BE?style=for-the-badge&logo=trpc&logoColor=white)
 ![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=for-the-badge&logo=prisma&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
-![Clerk](https://img.shields.io/badge/Clerk-6C47FF?style=for-the-badge&logo=clerk&logoColor=white)
+![Better Auth](https://img.shields.io/badge/Better_Auth-111111?style=for-the-badge&logo=shield&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-232F3E?style=for-the-badge&logo=amazonaws&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
-![Inngest](https://img.shields.io/badge/Inngest-000000?style=for-the-badge&logo=inngest&logoColor=white)
+![Vercel Workflows](https://img.shields.io/badge/Vercel_Workflows-000000?style=for-the-badge&logo=vercel&logoColor=white)
+![Vercel AI SDK](https://img.shields.io/badge/Vercel_AI_SDK-000000?style=for-the-badge&logo=vercel&logoColor=white)
 ![E2B](https://img.shields.io/badge/E2B-FF6B35?style=for-the-badge&logo=e2b&logoColor=white)
 
 </div>
@@ -32,8 +33,8 @@
 **⚡ Prompt-to-Code Next.js Apps**  
 Transform natural language descriptions into complete Next.js applications with TypeScript and Tailwind CSS. No templates, no restrictions.
 
-**🎯 Unlimited Free AI Generation**  
-Powered by Grok 4 during beta. Generate as many applications as you need without hitting usage limits or paywalls.
+**🎯 Fast OpenAI-Powered Generation**  
+Built around OpenAI models with a durable workflow runtime for multi-step code generation and result persistence.
 
 **✨ No AI Boilerplate**  
 Clean, idiomatic Next.js code without generic AI patterns. Every generation feels intentional, structured, and ready for real-world projects.
@@ -48,7 +49,7 @@ Refine your application through conversational prompts. Add features, adjust lay
 ## Current Limitations
 
 **⏱️ Extended Processing Time**  
-Generation and deployment can take up to 10 minutes due to free-tier AI model limitations and background job processing through Inngest. Patience is appreciated.
+Generation and deployment can still take several minutes because the app performs multi-step sandboxed code generation in a durable workflow.
 
 **🔍 Manual Review Required**  
 AI-generated code should always be reviewed before production use. While Nextly produces clean code, human oversight ensures it meets your specific requirements and edge cases.
@@ -120,15 +121,16 @@ Design a detailed product page for a sneaker store. Left side should have an ima
 | Framework | Next.js | React framework with App Router for modern web applications |
 | Language | TypeScript | Type-safe development with enhanced IDE support |
 | Styling | Tailwind CSS | Utility-first CSS framework for rapid UI development |
-| Authentication | Clerk | User management and authentication infrastructure |
+| Authentication | Better Auth | Session management and authentication infrastructure |
 | Database | PostgreSQL | Relational database for application data storage |
 | ORM | Prisma | Type-safe database client and schema management |
 | API Layer | tRPC | End-to-end typesafe API without code generation |
-| Background Jobs | Inngest | Reliable serverless job processing and workflows |
+| Background Jobs | Vercel Workflows | Durable orchestration for long-running generation jobs |
 | Code Execution | E2B | Sandboxed environment for secure code execution and previews |
 | Infrastructure | AWS | Cloud hosting and storage services |
 | Containerization | Docker | Application packaging and deployment consistency |
-| AI Model | Grok 4 | Advanced language model for code generation |
+| AI Runtime | Vercel AI SDK | Tool-calling runtime for code generation and model orchestration |
+| AI Model | OpenAI | Direct OpenAI models for code generation and summarization |
 
 ---
 
@@ -161,14 +163,18 @@ Create a `.env` file in the root directory:
 
 ```
 DATABASE_URL="postgresql://user:password@localhost:5432/nextly"
-CLERK_SECRET_KEY="your_clerk_secret_key"
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="your_clerk_publishable_key"
-GROK_API_KEY="your_grok_api_key"
+DIRECT_URL="postgresql://user:password@localhost:5432/nextly"
+BETTER_AUTH_SECRET="your_better_auth_secret"
+BETTER_AUTH_URL="http://localhost:3000"
+GOOGLE_CLIENT_ID="your_google_client_id"
+GOOGLE_CLIENT_SECRET="your_google_client_secret"
+GITHUB_CLIENT_ID="your_github_client_id"
+GITHUB_CLIENT_SECRET="your_github_client_secret"
+RESEND_API_KEY="your_resend_api_key"
+EMAIL_FROM="noreply@example.com"
+OPENAI_API_KEY="your_openai_api_key"
 E2B_API_KEY="your_e2b_api_key"
-INNGEST_EVENT_KEY="your_inngest_key"
-INNGEST_SIGNING_KEY="your_inngest_signing_key"
-AWS_ACCESS_KEY_ID="your_aws_access_key"
-AWS_SECRET_ACCESS_KEY="your_aws_secret_key"
+SANDBOX_PROVIDER="e2b"
 ```
 **Database Setup**
 ```
