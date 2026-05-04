@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 
 const publicRoutes = [
   "/",
@@ -32,11 +30,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  const sessionCookie =
+    req.cookies.get("better-auth.session_token") ??
+    req.cookies.get("__Secure-better-auth.session_token");
 
-  if (!session) {
+  if (!sessionCookie?.value) {
     return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 

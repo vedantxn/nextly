@@ -1,6 +1,5 @@
 "use client";
 
-import { authClient } from "@/lib/auth-client";
 import { useState } from "react";
 
 export default function ForgotPasswordPage() {
@@ -14,18 +13,26 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     setError("");
 
-    const res = await authClient.forgetPassword({
-      email,
-      redirectTo: "/reset-password",
-    });
+    try {
+      const res = await fetch("/api/auth/forget-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          redirectTo: "/reset-password",
+        }),
+      });
 
-    if (res.error) {
-      setError(res.error.message ?? "Something went wrong");
-      setLoading(false);
-    } else {
-      setSent(true);
-      setLoading(false);
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.message ?? "Something went wrong");
+      } else {
+        setSent(true);
+      }
+    } catch {
+      setError("Something went wrong");
     }
+    setLoading(false);
   }
 
   if (sent) {
