@@ -4,6 +4,10 @@ import { inngest } from "@/inngest/client";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { consumeCredits } from "@/lib/usage";
+import {
+  createQueuedGenerationJob,
+  markGenerationJobFailed,
+} from "@/lib/generation-jobs";
 import { resolveActiveOrganizationId } from "@/lib/organization";
 
 export const messagesRouter = createTRPCRouter({
@@ -80,14 +84,30 @@ export const messagesRouter = createTRPCRouter({
         },
       });
 
-      await inngest.send({
-        name: "code-agent/run",
-        data: {
-          value: input.value,
-          projectId: input.projectId,
-          model: input.model, // <-- Include model in event
-        },
+      const generationJob = await createQueuedGenerationJob({
+        projectId: input.projectId,
+        organizationId,
+        triggerMessageId: createdMessage.id,
+        model: input.model,
       });
+
+      try {
+        await inngest.send({
+          name: "code-agent/run",
+          data: {
+            value: input.value,
+            projectId: input.projectId,
+            model: input.model,
+            jobId: generationJob.id,
+          },
+        });
+      } catch (error) {
+        await markGenerationJobFailed(
+          generationJob.id,
+          error instanceof Error ? error.message : "Failed to dispatch generation job",
+        );
+        throw error;
+      }
 
       return createdMessage;
     }),

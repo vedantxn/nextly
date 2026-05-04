@@ -8,6 +8,10 @@ import { generateSlug } from "random-word-slugs";
 import { TRPCError } from "@trpc/server";
 import { consumeCredits } from "@/lib/usage";
 import {
+  createQueuedGenerationJob,
+  markGenerationJobFailed,
+} from "@/lib/generation-jobs";
+import {
   resolveAccessibleOrganizationBySlug,
   resolveActiveOrganizationId,
 } from "@/lib/organization";
@@ -104,6 +108,14 @@ export const projectsRouter = createTRPCRouter({
       }
 
       const createdProject = await prisma.project.create({
+        include: {
+          messages: {
+            take: 1,
+            orderBy: {
+              createdAt: "asc",
+            },
+          },
+        },
         data: {
           organizationId,
           name: generateSlug(2, { format: "kebab" }),
@@ -115,16 +127,41 @@ export const projectsRouter = createTRPCRouter({
             }
           }
         }
-      })
+      });
 
-      await inngest.send({
-        name: "code-agent/run",
-        data: { 
+      const triggerMessageId = createdProject.messages[0]?.id;
+
+      if (!triggerMessageId) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create the initial project message",
+        });
+      }
+
+      const generationJob = await createQueuedGenerationJob({
+        projectId: createdProject.id,
+        organizationId,
+        triggerMessageId,
+        model: input.model,
+      });
+
+      try {
+        await inngest.send({
+          name: "code-agent/run",
+          data: {
             value: input.value,
             projectId: createdProject.id,
-            model: input.model
-        },
-      });
+            model: input.model,
+            jobId: generationJob.id,
+          },
+        });
+      } catch (error) {
+        await markGenerationJobFailed(
+          generationJob.id,
+          error instanceof Error ? error.message : "Failed to dispatch generation job",
+        );
+        throw error;
+      }
 
       return createdProject;
     }),

@@ -6,6 +6,8 @@ const mockFindMany = vi.fn();
 const mockCreate = vi.fn();
 const mockInngestSend = vi.fn();
 const mockConsumeCredits = vi.fn();
+const mockCreateQueuedGenerationJob = vi.fn();
+const mockMarkGenerationJobFailed = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   default: {
@@ -21,6 +23,10 @@ vi.mock("@/inngest/client", () => ({
 }));
 vi.mock("@/lib/usage", () => ({
   consumeCredits: (...args: any[]) => mockConsumeCredits(...args),
+}));
+vi.mock("@/lib/generation-jobs", () => ({
+  createQueuedGenerationJob: (...args: any[]) => mockCreateQueuedGenerationJob(...args),
+  markGenerationJobFailed: (...args: any[]) => mockMarkGenerationJobFailed(...args),
 }));
 vi.mock("@/lib/auth", () => ({
   auth: { api: { getSession: vi.fn() } },
@@ -43,6 +49,8 @@ describe("projectsRouter", () => {
     vi.clearAllMocks();
     mockInngestSend.mockResolvedValue(undefined);
     mockConsumeCredits.mockResolvedValue(undefined);
+    mockCreateQueuedGenerationJob.mockResolvedValue({ id: "job-1" });
+    mockMarkGenerationJobFailed.mockResolvedValue(undefined);
   });
 
   describe("getOne", () => {
@@ -94,7 +102,12 @@ describe("projectsRouter", () => {
     const validInput = { value: "Build a todo app", model: "grok" as const };
 
     it("creates project and dispatches inngest event", async () => {
-      const created = { id: "p-new", name: "cool-slug", organizationId: "org-1" };
+      const created = {
+        id: "p-new",
+        name: "cool-slug",
+        organizationId: "org-1",
+        messages: [{ id: "m-1" }],
+      };
       mockCreate.mockResolvedValue(created);
       const caller = createCaller(authedCtx);
 
@@ -104,6 +117,14 @@ describe("projectsRouter", () => {
       expect(mockConsumeCredits).toHaveBeenCalled();
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
+          include: {
+            messages: {
+              take: 1,
+              orderBy: {
+                createdAt: "asc",
+              },
+            },
+          },
           data: expect.objectContaining({
             organizationId: "org-1",
             messages: {
@@ -116,14 +137,35 @@ describe("projectsRouter", () => {
           }),
         })
       );
+      expect(mockCreateQueuedGenerationJob).toHaveBeenCalledWith({
+        projectId: "p-new",
+        organizationId: "org-1",
+        triggerMessageId: "m-1",
+        model: "grok",
+      });
       expect(mockInngestSend).toHaveBeenCalledWith({
         name: "code-agent/run",
         data: {
           value: "Build a todo app",
           projectId: "p-new",
           model: "grok",
+          jobId: "job-1",
         },
       });
+    });
+
+    it("marks the job as failed if dispatching to inngest fails", async () => {
+      mockCreate.mockResolvedValue({
+        id: "p-new",
+        name: "cool-slug",
+        organizationId: "org-1",
+        messages: [{ id: "m-1" }],
+      });
+      mockInngestSend.mockRejectedValue(new Error("queue down"));
+      const caller = createCaller(authedCtx);
+
+      await expect(caller.create(validInput)).rejects.toThrow("queue down");
+      expect(mockMarkGenerationJobFailed).toHaveBeenCalledWith("job-1", "queue down");
     });
 
     it("throws BAD_REQUEST when consumeCredits throws an Error", async () => {

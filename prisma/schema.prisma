@@ -96,11 +96,12 @@ model Organization {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  personalForUser User?        @relation("PersonalOrganizationOwner", fields: [personalForUserId], references: [id], onDelete: Cascade)
-  activeSessions  Session[]    @relation("ActiveOrganizationSessions")
+  personalForUser User?           @relation("PersonalOrganizationOwner", fields: [personalForUserId], references: [id], onDelete: Cascade)
+  activeSessions  Session[]       @relation("ActiveOrganizationSessions")
   members         Member[]
   invitations     Invitation[]
   projects        Project[]
+  generationJobs  GenerationJob[]
   usage           Usage?
 
   @@index([kind])
@@ -149,8 +150,9 @@ model Project {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  messages     Message[]
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages       Message[]
+  generationJobs GenerationJob[]
 
   @@index([organizationId])
   @@index([updatedAt])
@@ -176,8 +178,9 @@ model Message {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
-  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  fragment Fragment?
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fragment      Fragment?
+  triggeredJobs GenerationJob[] @relation("TriggerMessageGenerationJobs")
 
   @@index([projectId])
   @@index([createdAt])
@@ -211,6 +214,40 @@ model Usage {
 
   @@index([organizationId])
   @@map("usage")
+}
+
+enum GenerationJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+model GenerationJob {
+  id               String              @id @default(cuid())
+  projectId        String
+  organizationId   String
+  triggerMessageId String              @unique
+  workflowRunId    String?
+  status           GenerationJobStatus @default(QUEUED)
+  model            String
+  attemptCount     Int                 @default(0)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  failedAt         DateTime?
+  lastError        String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  triggerMessage Message      @relation("TriggerMessageGenerationJobs", fields: [triggerMessageId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([projectId, createdAt])
+  @@index([status])
+  @@map("generation_job")
 }
 
 model RateLimiter {
