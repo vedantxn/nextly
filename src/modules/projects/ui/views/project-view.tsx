@@ -36,10 +36,11 @@ const EmptyState = () => (
 );
 
 interface Props {
+    orgSlug: string;
     projectId: string;
 }
 
-export const ProjectView = ({ projectId }: Props) => {
+export const ProjectView = ({ orgSlug, projectId }: Props) => {
     const [activeFragment, setActiveFragment] = useState<Fragment | null>(null);
     const [tabState, setTabState] = useState<"preview" | "code">("preview");
     const [copied, setCopied] = useState(false);
@@ -70,7 +71,7 @@ export const ProjectView = ({ projectId }: Props) => {
                     <div className="flex-shrink-0">
                         <ErrorBoundary fallback={<ErrorFallback message="Error loading project header." />}>
                             <Suspense fallback={<LoadingState message="Loading Project..." />}>
-                                <ProjectHeader projectId={projectId} />
+                                <ProjectHeader orgSlug={orgSlug} projectId={projectId} />
                             </Suspense>
                         </ErrorBoundary>
                     </div>

@@ -21,13 +21,14 @@ import { useTRPC } from "@/trpc/client";
 import { LightPullThemeSwitcher } from "@/components/21stdev/light-pull-theme-switcher";
 
 interface Props {
+  orgSlug: string;
   projectId: string;
 }
 
-export const ProjectHeader = ({ projectId }: Props) => {
+export const ProjectHeader = ({ orgSlug, projectId }: Props) => {
   const trpc = useTRPC();
   const { data: project } = useSuspenseQuery(
-    trpc.projects.getOne.queryOptions({ id: projectId })
+    trpc.projects.getOne.queryOptions({ id: projectId, orgSlug })
   );
 
   // const { theme, setTheme } = useTheme();
@@ -42,7 +43,7 @@ export const ProjectHeader = ({ projectId }: Props) => {
             {project?.name ?? "Project"}
           </span>
           <Link
-            href="/"
+            href={`/orgs/${orgSlug}/projects`}
             className="flex items-center text-sm text-muted-foreground hover:text-primary gap-1"
           >
             <ChevronLeftIcon size={16} /> Back to dashboard

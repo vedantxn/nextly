@@ -7,17 +7,42 @@ import {
 import { generateSlug } from "random-word-slugs";
 import { TRPCError } from "@trpc/server";
 import { consumeCredits } from "@/lib/usage";
-import { resolveActiveOrganizationId } from "@/lib/organization";
+import {
+  resolveAccessibleOrganizationBySlug,
+  resolveActiveOrganizationId,
+} from "@/lib/organization";
+
+async function resolveRequestedOrganizationId(userId: string, session: { user?: { id?: string | null } | null; session?: { activeOrganizationId?: string | null } | null }, orgSlug?: string) {
+  if (!orgSlug) {
+    return resolveActiveOrganizationId(session);
+  }
+
+  const organization = await resolveAccessibleOrganizationBySlug(userId, orgSlug);
+
+  if (!organization) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Organization not found",
+    });
+  }
+
+  return organization.id;
+}
 
 export const projectsRouter = createTRPCRouter({
   getOne: protectedProcedure
     .input(
       z.object({
         id: z.string().min(1, {message: "Project ID is required"}),
+        orgSlug: z.string().min(1).optional(),
       }),
     )
     .query(async({ input, ctx }) => {
-      const organizationId = await resolveActiveOrganizationId(ctx.session);
+      const organizationId = await resolveRequestedOrganizationId(
+        ctx.user.id,
+        ctx.session,
+        input.orgSlug,
+      );
       
       const exsitingProject = await prisma.project.findFirst({
         where: {
@@ -34,8 +59,17 @@ export const projectsRouter = createTRPCRouter({
     }),
 
   getMany: protectedProcedure
-    .query(async ({ ctx }) => {
-      const organizationId = await resolveActiveOrganizationId(ctx.session);
+    .input(
+      z.object({
+        orgSlug: z.string().min(1).optional(),
+      }).optional(),
+    )
+    .query(async ({ input, ctx }) => {
+      const organizationId = await resolveRequestedOrganizationId(
+        ctx.user.id,
+        ctx.session,
+        input?.orgSlug,
+      );
       const projects = await prisma.project.findMany({
         where: {
           organizationId,

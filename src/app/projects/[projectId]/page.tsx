@@ -1,8 +1,7 @@
-import { getQueryClient, trpc } from "@/trpc/server";
-import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { ProjectView } from "@/modules/projects/ui/views/project-view";
-import { Suspense } from "react";
-import { ErrorBoundary } from "react-error-boundary";
+import { auth } from "@/lib/auth";
+import { resolveProjectOrganizationForUser } from "@/lib/organization";
+import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
 
 interface Props {
     params: Promise<{ projectId: string }>
@@ -11,23 +10,24 @@ interface Props {
 const Page = async ({ params }: Props) => {
     const { projectId } = await params;
 
-    const queryClient = await getQueryClient();
-    void queryClient.prefetchQuery(trpc.messages.getMany.queryOptions({
-        projectId,
-    }));
-    void queryClient.prefetchQuery(trpc.projects.getOne.queryOptions({
-        id: projectId,
-    }));
-    
-    return (
-        <HydrationBoundary state={dehydrate(queryClient)}>
-          <ErrorBoundary fallback={<p>Error</p>} >
-            <Suspense fallback={<p>Loading...</p>}>
-              <ProjectView projectId={projectId} />
-            </Suspense>
-          </ErrorBoundary>
-        </HydrationBoundary>
-    )
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session?.user) {
+      redirect("/sign-in");
+    }
+
+    const scopedProject = await resolveProjectOrganizationForUser(
+      session.user.id,
+      projectId,
+    );
+
+    if (!scopedProject?.organization) {
+      notFound();
+    }
+
+    redirect(`/orgs/${scopedProject.organization.slug}/projects/${projectId}`);
 }
 
 export default Page

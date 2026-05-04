@@ -19,6 +19,13 @@ type PersonalOrganizationInput = {
   image?: string | null;
 };
 
+export type AccessibleOrganization = {
+  id: string;
+  slug: string;
+  name: string;
+  kind: string;
+};
+
 function slugifySegment(value: string) {
   return value
     .normalize("NFKD")
@@ -148,4 +155,67 @@ export async function resolveActiveOrganizationId(session: SessionWithOrganizati
   }
 
   throw new Error("No organization is available for this user");
+}
+
+export async function resolveActiveOrganization(session: SessionWithOrganization): Promise<AccessibleOrganization> {
+  const organizationId = await resolveActiveOrganizationId(session);
+  const organization = await prisma.organization.findUnique({
+    where: { id: organizationId },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      kind: true,
+    },
+  });
+
+  if (!organization) {
+    throw new Error("The active organization could not be found");
+  }
+
+  return organization;
+}
+
+export async function resolveAccessibleOrganizationBySlug(userId: string, orgSlug: string): Promise<AccessibleOrganization | null> {
+  return prisma.organization.findFirst({
+    where: {
+      slug: orgSlug,
+      members: {
+        some: {
+          userId,
+        },
+      },
+    },
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      kind: true,
+    },
+  });
+}
+
+export async function resolveProjectOrganizationForUser(userId: string, projectId: string) {
+  return prisma.project.findFirst({
+    where: {
+      id: projectId,
+      organization: {
+        members: {
+          some: {
+            userId,
+          },
+        },
+      },
+    },
+    select: {
+      organization: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          kind: true,
+        },
+      },
+    },
+  });
 }
