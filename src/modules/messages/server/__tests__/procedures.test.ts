@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const mockProjectFindUnique = vi.fn();
+const mockProjectFindFirst = vi.fn();
 const mockMessageFindMany = vi.fn();
 const mockMessageCreate = vi.fn();
 const mockInngestSend = vi.fn();
@@ -9,7 +9,7 @@ const mockConsumeCredits = vi.fn();
 vi.mock("@/lib/db", () => ({
   default: {
     project: {
-      findUnique: (...args: any[]) => mockProjectFindUnique(...args),
+      findFirst: (...args: any[]) => mockProjectFindFirst(...args),
     },
     message: {
       findMany: (...args: any[]) => mockMessageFindMany(...args),
@@ -36,7 +36,7 @@ import { messagesRouter } from "../procedures";
 
 const createCaller = createCallerFactory(messagesRouter);
 const authedCtx = {
-  session: { user: { id: "user-1" }, session: {} },
+  session: { user: { id: "user-1" }, session: { activeOrganizationId: "org-1" } },
 } as any;
 
 describe("messagesRouter", () => {
@@ -61,7 +61,7 @@ describe("messagesRouter", () => {
       expect(mockMessageFindMany).toHaveBeenCalledWith({
         where: {
           projectId: "p1",
-          project: { userId: "user-1" },
+          project: { organizationId: "org-1" },
         },
         orderBy: { updatedAt: "asc" },
         include: { fragment: true },
@@ -82,7 +82,7 @@ describe("messagesRouter", () => {
     };
 
     it("checks project ownership before consuming credits", async () => {
-      mockProjectFindUnique.mockResolvedValue(null);
+      mockProjectFindFirst.mockResolvedValue(null);
       const caller = createCaller(authedCtx);
 
       await expect(caller.create(validInput)).rejects.toMatchObject({
@@ -93,7 +93,7 @@ describe("messagesRouter", () => {
     });
 
     it("creates message and dispatches inngest event", async () => {
-      mockProjectFindUnique.mockResolvedValue({ id: "p1", userId: "user-1" });
+      mockProjectFindFirst.mockResolvedValue({ id: "p1", organizationId: "org-1" });
       const created = { id: "m-new", content: "Add dark mode", role: "USER" };
       mockMessageCreate.mockResolvedValue(created);
       const caller = createCaller(authedCtx);
@@ -121,7 +121,7 @@ describe("messagesRouter", () => {
     });
 
     it("throws BAD_REQUEST when consumeCredits throws an Error", async () => {
-      mockProjectFindUnique.mockResolvedValue({ id: "p1", userId: "user-1" });
+      mockProjectFindFirst.mockResolvedValue({ id: "p1", organizationId: "org-1" });
       mockConsumeCredits.mockRejectedValue(new Error("Auth failed"));
       const caller = createCaller(authedCtx);
 
@@ -132,7 +132,7 @@ describe("messagesRouter", () => {
     });
 
     it("throws TOO_MANY_REQUESTS when consumeCredits throws a non-Error", async () => {
-      mockProjectFindUnique.mockResolvedValue({ id: "p1", userId: "user-1" });
+      mockProjectFindFirst.mockResolvedValue({ id: "p1", organizationId: "org-1" });
       mockConsumeCredits.mockRejectedValue("rate limited");
       const caller = createCaller(authedCtx);
 

@@ -9,36 +9,40 @@ datasource db {
 // ─── Better Auth tables ─────────────────────────────────────
 
 model User {
-  id            String    @id
+  id            String   @id
   name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false)
+  email         String   @unique
+  emailVerified Boolean  @default(false)
   image         String?
-  role          String    @default("user")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  role          String   @default("user")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  sessions Session[]
-  accounts Account[]
-  projects Project[]
-  usage    Usage?
+  sessions             Session[]
+  accounts             Account[]
+  memberships          Member[]
+  invitationsSent      Invitation[]  @relation("InvitationInviter")
+  personalOrganization Organization? @relation("PersonalOrganizationOwner")
 
   @@map("user")
 }
 
 model Session {
-  id        String   @id
-  userId    String
-  token     String   @unique
-  expiresAt DateTime
-  ipAddress String?
-  userAgent String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                   String   @id
+  userId               String
+  token                String   @unique
+  expiresAt            DateTime
+  ipAddress            String?
+  userAgent            String?
+  activeOrganizationId String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeOrganization Organization? @relation("ActiveOrganizationSessions", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([activeOrganizationId])
   @@map("session")
 }
 
@@ -81,18 +85,74 @@ enum Visibility {
   PRIVATE
 }
 
-model Project {
-  id         String     @id @default(uuid())
-  userId     String
-  name       String
-  visibility Visibility @default(PRIVATE)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+model Organization {
+  id                String   @id @default(cuid())
+  name              String
+  slug              String   @unique
+  logo              String?
+  metadata          Json?
+  kind              String   @default("TEAM")
+  personalForUserId String?  @unique
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages Message[]
+  personalForUser User?        @relation("PersonalOrganizationOwner", fields: [personalForUserId], references: [id], onDelete: Cascade)
+  activeSessions  Session[]    @relation("ActiveOrganizationSessions")
+  members         Member[]
+  invitations     Invitation[]
+  projects        Project[]
+  usage           Usage?
 
+  @@index([kind])
+  @@map("organization")
+}
+
+model Member {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  role           String   @default("member")
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
   @@index([userId])
+  @@map("member")
+}
+
+model Invitation {
+  id             String   @id @default(cuid())
+  organizationId String
+  email          String
+  role           String
+  status         String   @default("pending")
+  inviterId      String
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  inviter      User         @relation("InvitationInviter", fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+  @@index([inviterId])
+  @@map("invitation")
+}
+
+model Project {
+  id             String     @id @default(uuid())
+  organizationId String
+  name           String
+  visibility     Visibility @default(PRIVATE)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messages     Message[]
+
+  @@index([organizationId])
   @@index([updatedAt])
   @@map("project")
 }
@@ -139,17 +199,17 @@ model Fragment {
 }
 
 model Usage {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  points      Int      @default(0)
-  periodStart DateTime @default(now())
-  periodEnd   DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(uuid())
+  organizationId String   @unique
+  points         Int      @default(0)
+  periodStart    DateTime @default(now())
+  periodEnd      DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  @@index([organizationId])
   @@map("usage")
 }
 

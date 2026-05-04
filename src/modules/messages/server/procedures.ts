@@ -4,6 +4,7 @@ import { inngest } from "@/inngest/client";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { consumeCredits } from "@/lib/usage";
+import { resolveActiveOrganizationId } from "@/lib/organization";
 
 export const messagesRouter = createTRPCRouter({
   getMany: protectedProcedure
@@ -13,11 +14,12 @@ export const messagesRouter = createTRPCRouter({
       }),
     )
     .query(async ({ input, ctx }) => {
+      const organizationId = await resolveActiveOrganizationId(ctx.session);
       const messages = await prisma.message.findMany({
         where: {
           projectId: input.projectId,
           project: {
-            userId: ctx.user.id,
+            organizationId,
           },
         },
         orderBy: {
@@ -43,10 +45,11 @@ export const messagesRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      const exsitingProject = await prisma.project.findUnique({
+      const organizationId = await resolveActiveOrganizationId(ctx.session);
+      const exsitingProject = await prisma.project.findFirst({
         where: {
           id: input.projectId,
-          userId: ctx.user.id,
+          organizationId,
         },
       });
 

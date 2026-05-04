@@ -7,6 +7,7 @@ import {
 import { generateSlug } from "random-word-slugs";
 import { TRPCError } from "@trpc/server";
 import { consumeCredits } from "@/lib/usage";
+import { resolveActiveOrganizationId } from "@/lib/organization";
 
 export const projectsRouter = createTRPCRouter({
   getOne: protectedProcedure
@@ -16,11 +17,12 @@ export const projectsRouter = createTRPCRouter({
       }),
     )
     .query(async({ input, ctx }) => {
+      const organizationId = await resolveActiveOrganizationId(ctx.session);
       
-      const exsitingProject = await prisma.project.findUnique({
+      const exsitingProject = await prisma.project.findFirst({
         where: {
           id: input.id,
-          userId: ctx.user.id,
+          organizationId,
         },
       });
 
@@ -33,9 +35,10 @@ export const projectsRouter = createTRPCRouter({
 
   getMany: protectedProcedure
     .query(async ({ ctx }) => {
+      const organizationId = await resolveActiveOrganizationId(ctx.session);
       const projects = await prisma.project.findMany({
         where: {
-          userId: ctx.user.id,
+          organizationId,
         },
         orderBy: {
           updatedAt: "desc",
@@ -54,6 +57,7 @@ export const projectsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      const organizationId = await resolveActiveOrganizationId(ctx.session);
 
       try {
         await consumeCredits();
@@ -67,7 +71,7 @@ export const projectsRouter = createTRPCRouter({
 
       const createdProject = await prisma.project.create({
         data: {
-          userId: ctx.user.id,
+          organizationId,
           name: generateSlug(2, { format: "kebab" }),
           messages: {
             create: {

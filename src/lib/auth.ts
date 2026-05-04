@@ -1,12 +1,119 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { createAccessControl, organization } from "better-auth/plugins";
 import prisma from "@/lib/db";
 import { sendEmail } from "@/lib/email";
+import { ensurePersonalOrganization } from "@/lib/organization";
+
+const organizationAccess = createAccessControl({
+  organization: ["update", "delete"],
+  member: ["create", "update", "delete"],
+  invitation: ["create", "cancel"],
+  team: ["create", "update", "delete"],
+  ac: ["read"],
+});
+
+const organizationRoles = {
+  owner: organizationAccess.newRole({
+    organization: ["update", "delete"],
+    member: ["create", "update", "delete"],
+    invitation: ["create", "cancel"],
+    team: ["create", "update", "delete"],
+    ac: ["read"],
+  }),
+  member: organizationAccess.newRole({
+    organization: [],
+    member: [],
+    invitation: [],
+    team: [],
+    ac: ["read"],
+  }),
+};
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  plugins: [
+    organization({
+      ac: organizationAccess,
+      roles: organizationRoles,
+      creatorRole: "owner",
+      allowUserToCreateOrganization: true,
+      membershipLimit: Number.MAX_SAFE_INTEGER,
+      invitationLimit: Number.MAX_SAFE_INTEGER,
+      schema: {
+        organization: {
+          additionalFields: {
+            kind: {
+              type: "string",
+              required: true,
+              defaultValue: "TEAM",
+              input: false,
+            },
+            personalForUserId: {
+              type: "string",
+              required: false,
+              input: false,
+              returned: false,
+              references: {
+                model: "user",
+                field: "id",
+                onDelete: "cascade",
+              },
+            },
+          },
+        },
+      },
+    }),
+  ],
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          await ensurePersonalOrganization({
+            userId: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          });
+        },
+      },
+    },
+    session: {
+      create: {
+        before: async (session) => {
+          const user = await prisma.user.findUnique({
+            where: { id: session.userId },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+            },
+          });
+
+          if (!user) {
+            return;
+          }
+
+          const personalOrganization = await ensurePersonalOrganization({
+            userId: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+          });
+
+          return {
+            data: {
+              ...session,
+              activeOrganizationId: personalOrganization.id,
+            },
+          };
+        },
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, url }) => {

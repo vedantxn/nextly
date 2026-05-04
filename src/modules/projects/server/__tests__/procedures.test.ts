@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { TRPCError } from "@trpc/server";
 
-const mockFindUnique = vi.fn();
+const mockFindFirst = vi.fn();
 const mockFindMany = vi.fn();
 const mockCreate = vi.fn();
 const mockInngestSend = vi.fn();
@@ -10,7 +10,7 @@ const mockConsumeCredits = vi.fn();
 vi.mock("@/lib/db", () => ({
   default: {
     project: {
-      findUnique: (...args: any[]) => mockFindUnique(...args),
+      findFirst: (...args: any[]) => mockFindFirst(...args),
       findMany: (...args: any[]) => mockFindMany(...args),
       create: (...args: any[]) => mockCreate(...args),
     },
@@ -35,7 +35,7 @@ import { projectsRouter } from "../procedures";
 
 const createCaller = createCallerFactory(projectsRouter);
 const authedCtx = {
-  session: { user: { id: "user-1" }, session: {} },
+  session: { user: { id: "user-1" }, session: { activeOrganizationId: "org-1" } },
 } as any;
 
 describe("projectsRouter", () => {
@@ -47,20 +47,20 @@ describe("projectsRouter", () => {
 
   describe("getOne", () => {
     it("returns project when found and owned by user", async () => {
-      const project = { id: "p1", name: "test", userId: "user-1" };
-      mockFindUnique.mockResolvedValue(project);
+      const project = { id: "p1", name: "test", organizationId: "org-1" };
+      mockFindFirst.mockResolvedValue(project);
       const caller = createCaller(authedCtx);
 
       const result = await caller.getOne({ id: "p1" });
 
       expect(result).toEqual(project);
-      expect(mockFindUnique).toHaveBeenCalledWith({
-        where: { id: "p1", userId: "user-1" },
+      expect(mockFindFirst).toHaveBeenCalledWith({
+        where: { id: "p1", organizationId: "org-1" },
       });
     });
 
     it("throws NOT_FOUND when project does not exist", async () => {
-      mockFindUnique.mockResolvedValue(null);
+      mockFindFirst.mockResolvedValue(null);
       const caller = createCaller(authedCtx);
 
       await expect(caller.getOne({ id: "p1" })).rejects.toMatchObject({
@@ -84,7 +84,7 @@ describe("projectsRouter", () => {
 
       expect(result).toEqual(projects);
       expect(mockFindMany).toHaveBeenCalledWith({
-        where: { userId: "user-1" },
+        where: { organizationId: "org-1" },
         orderBy: { updatedAt: "desc" },
       });
     });
@@ -94,7 +94,7 @@ describe("projectsRouter", () => {
     const validInput = { value: "Build a todo app", model: "grok" as const };
 
     it("creates project and dispatches inngest event", async () => {
-      const created = { id: "p-new", name: "cool-slug", userId: "user-1" };
+      const created = { id: "p-new", name: "cool-slug", organizationId: "org-1" };
       mockCreate.mockResolvedValue(created);
       const caller = createCaller(authedCtx);
 
@@ -105,7 +105,7 @@ describe("projectsRouter", () => {
       expect(mockCreate).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
-            userId: "user-1",
+            organizationId: "org-1",
             messages: {
               create: {
                 content: "Build a todo app",
