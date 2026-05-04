@@ -1,6 +1,6 @@
 "use client";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useTRPC } from "@/trpc/client";
 import { MessageCard } from "./message-card";
 import { MessageForm } from "./message-form";
@@ -34,6 +34,17 @@ export const MessagesContainer = ({
     )
   );
 
+  const { data: latestGenerationJob } = useQuery(
+    trpc.generationJobs.latestForProject.queryOptions(
+      {
+        projectId,
+      },
+      {
+        refetchInterval: 5000,
+      },
+    ),
+  );
+
   // Auto-set active fragment from last assistant message
   useEffect(() => {
     const lastAssistantMessage = messages?.findLast(
@@ -53,8 +64,9 @@ export const MessagesContainer = ({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages?.length]);
 
-  const lastMessage = messages?.[messages.length - 1];
-  const isLastMessageUser = lastMessage?.role === "USER";
+  const isGenerating =
+    latestGenerationJob?.status === "QUEUED" ||
+    latestGenerationJob?.status === "RUNNING";
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -75,7 +87,7 @@ export const MessagesContainer = ({
             type={message.type}
           />
         ))}
-        {isLastMessageUser && <MessageLoading />}
+        {isGenerating && <MessageLoading />}
         <div ref={bottomRef} />
       </div>
 

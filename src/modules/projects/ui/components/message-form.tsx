@@ -66,6 +66,9 @@ export const MessageForm = ({ projectId }: Props) => {
       onSuccess: () => {
         form.reset();
         queryClient.invalidateQueries(trpc.messages.getMany.queryOptions({ projectId }));
+        queryClient.invalidateQueries(
+          trpc.generationJobs.latestForProject.queryOptions({ projectId })
+        );
         queryClient.invalidateQueries(trpc.usage.status.queryOptions());
       },
       onError: () => toast.error("Failed to create message"),
