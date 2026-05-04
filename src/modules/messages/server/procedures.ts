@@ -17,7 +17,7 @@ export const messagesRouter = createTRPCRouter({
         where: {
           projectId: input.projectId,
           project: {
-            userId: ctx.auth.userId,
+            userId: ctx.user.id,
           },
         },
         orderBy: {
@@ -46,7 +46,7 @@ export const messagesRouter = createTRPCRouter({
       const exsitingProject = await prisma.project.findUnique({
         where: {
           id: input.projectId,
-          userId: ctx.auth.userId,
+          userId: ctx.user.id,
         },
       });
 
