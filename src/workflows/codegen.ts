@@ -6,8 +6,8 @@ import {
 } from "@/codegen/runtime";
 import { loadRecentProjectHistory } from "@/codegen/history";
 import {
-  createE2BSandboxAdapter,
-  connectE2BSandboxAdapter,
+  createSandboxAdapter,
+  connectSandboxAdapter,
 } from "@/codegen/sandbox";
 import { type ProjectModelKey } from "@/codegen/models";
 import {
@@ -44,7 +44,7 @@ async function markJobFailedStep(jobId: string, error: string) {
 async function createSandboxStep() {
   "use step";
 
-  const adapter = await createE2BSandboxAdapter();
+  const adapter = await createSandboxAdapter();
   return adapter.id;
 }
 
@@ -57,7 +57,7 @@ async function loadHistoryStep(projectId: string) {
 async function runAgentStep(input: CodegenWorkflowInput, sandboxId: string) {
   "use step";
 
-  const sandbox = await connectE2BSandboxAdapter(sandboxId);
+  const sandbox = await connectSandboxAdapter(sandboxId);
   const history = await loadRecentProjectHistory(input.projectId, 5);
 
   return runCodegenAgent({
@@ -71,7 +71,7 @@ async function runAgentStep(input: CodegenWorkflowInput, sandboxId: string) {
 async function getSandboxPreviewStep(sandboxId: string) {
   "use step";
 
-  const sandbox = await connectE2BSandboxAdapter(sandboxId);
+  const sandbox = await connectSandboxAdapter(sandboxId);
   return sandbox.getPreviewUrl(3000);
 }
 
