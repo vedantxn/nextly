@@ -4,10 +4,11 @@ import { TRPCError } from "@trpc/server";
 const mockFindFirst = vi.fn();
 const mockFindMany = vi.fn();
 const mockCreate = vi.fn();
-const mockInngestSend = vi.fn();
+const mockWorkflowStart = vi.fn();
 const mockConsumeCredits = vi.fn();
 const mockCreateQueuedGenerationJob = vi.fn();
 const mockMarkGenerationJobFailed = vi.fn();
+const mockAttachGenerationJobWorkflowRun = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   default: {
@@ -18,13 +19,15 @@ vi.mock("@/lib/db", () => ({
     },
   },
 }));
-vi.mock("@/inngest/client", () => ({
-  inngest: { send: (...args: any[]) => mockInngestSend(...args) },
+vi.mock("workflow/api", () => ({
+  start: (...args: any[]) => mockWorkflowStart(...args),
 }));
 vi.mock("@/lib/usage", () => ({
   consumeCredits: (...args: any[]) => mockConsumeCredits(...args),
 }));
 vi.mock("@/lib/generation-jobs", () => ({
+  attachGenerationJobWorkflowRun: (...args: any[]) =>
+    mockAttachGenerationJobWorkflowRun(...args),
   createQueuedGenerationJob: (...args: any[]) => mockCreateQueuedGenerationJob(...args),
   markGenerationJobFailed: (...args: any[]) => mockMarkGenerationJobFailed(...args),
 }));
@@ -47,10 +50,11 @@ const authedCtx = {
 describe("projectsRouter", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockInngestSend.mockResolvedValue(undefined);
+    mockWorkflowStart.mockResolvedValue({ runId: "wf-run-1" });
     mockConsumeCredits.mockResolvedValue(undefined);
     mockCreateQueuedGenerationJob.mockResolvedValue({ id: "job-1" });
     mockMarkGenerationJobFailed.mockResolvedValue(undefined);
+    mockAttachGenerationJobWorkflowRun.mockResolvedValue(undefined);
   });
 
   describe("getOne", () => {
@@ -143,29 +147,32 @@ describe("projectsRouter", () => {
         triggerMessageId: "m-1",
         model: "grok",
       });
-      expect(mockInngestSend).toHaveBeenCalledWith({
-        name: "code-agent/run",
-        data: {
-          value: "Build a todo app",
+      expect(mockWorkflowStart).toHaveBeenCalledWith(expect.any(Function), [
+        {
+          prompt: "Build a todo app",
           projectId: "p-new",
           model: "grok",
           jobId: "job-1",
         },
-      });
+      ]);
+      expect(mockAttachGenerationJobWorkflowRun).toHaveBeenCalledWith(
+        "job-1",
+        "wf-run-1",
+      );
     });
 
-    it("marks the job as failed if dispatching to inngest fails", async () => {
+    it("marks the job as failed if starting the workflow fails", async () => {
       mockCreate.mockResolvedValue({
         id: "p-new",
         name: "cool-slug",
         organizationId: "org-1",
         messages: [{ id: "m-1" }],
       });
-      mockInngestSend.mockRejectedValue(new Error("queue down"));
+      mockWorkflowStart.mockRejectedValue(new Error("workflow down"));
       const caller = createCaller(authedCtx);
 
-      await expect(caller.create(validInput)).rejects.toThrow("queue down");
-      expect(mockMarkGenerationJobFailed).toHaveBeenCalledWith("job-1", "queue down");
+      await expect(caller.create(validInput)).rejects.toThrow("workflow down");
+      expect(mockMarkGenerationJobFailed).toHaveBeenCalledWith("job-1", "workflow down");
     });
 
     it("throws BAD_REQUEST when consumeCredits throws an Error", async () => {

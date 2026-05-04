@@ -1,6 +1,6 @@
 import { z } from "zod";
 import prisma from "@/lib/db";
-import { inngest } from "@/inngest/client";
+import { start } from "workflow/api";
 import { 
   createTRPCRouter, 
   protectedProcedure } from "@/trpc/init";
@@ -8,9 +8,11 @@ import { generateSlug } from "random-word-slugs";
 import { TRPCError } from "@trpc/server";
 import { consumeCredits } from "@/lib/usage";
 import {
+  attachGenerationJobWorkflowRun,
   createQueuedGenerationJob,
   markGenerationJobFailed,
 } from "@/lib/generation-jobs";
+import { codegenWorkflow } from "@/workflows/codegen";
 import {
   resolveAccessibleOrganizationBySlug,
   resolveActiveOrganizationId,
@@ -146,15 +148,16 @@ export const projectsRouter = createTRPCRouter({
       });
 
       try {
-        await inngest.send({
-          name: "code-agent/run",
-          data: {
-            value: input.value,
+        const run = await start(codegenWorkflow, [
+          {
+            prompt: input.value,
             projectId: createdProject.id,
             model: input.model,
             jobId: generationJob.id,
           },
-        });
+        ]);
+
+        await attachGenerationJobWorkflowRun(generationJob.id, run.runId);
       } catch (error) {
         await markGenerationJobFailed(
           generationJob.id,

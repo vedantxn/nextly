@@ -65,3 +65,12 @@ export async function markGenerationJobFailed(jobId: string, error: string) {
     },
   });
 }
+
+export async function attachGenerationJobWorkflowRun(jobId: string, workflowRunId: string) {
+  return prisma.generationJob.update({
+    where: { id: jobId },
+    data: {
+      workflowRunId,
+    },
+  });
+}
