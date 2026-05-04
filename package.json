@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.58",
     "@e2b/code-interpreter": "^1.5.1",
     "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^5.2.0",
@@ -33,6 +34,7 @@
     "@trpc/server": "^11.4.3",
     "@trpc/tanstack-react-query": "^11.4.3",
     "@vercel/analytics": "^1.5.0",
+    "ai": "^6.0.174",
     "axios": "^1.12.2",
     "better-auth": "^1.6.9",
     "class-variance-authority": "^0.7.1",
@@ -71,6 +73,7 @@
     "tabler": "^1.0.0",
     "tailwind-merge": "^3.3.1",
     "toast": "^0.5.4",
+    "workflow": "^4.2.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {

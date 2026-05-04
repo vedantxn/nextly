@@ -6,68 +6,118 @@ import { openai,
          type Tool, 
          type Message, 
          createState } from "@inngest/agent-kit";
-import { Sandbox } from "e2b";
-import { getSandboxId, lastAssistantTextMessageContent } from "./utils";
+import { lastAssistantTextMessageContent } from "./utils";
 import z from "zod";
 import { FRAGMENT_TITLE_PROMPT, PROMPT, RESPONSE_PROMPT } from "@/prompt";
 import prisma from "@/lib/db";
 import { parseAgentOutput } from "./utils";
-import { SANDBOX_TIMEOUT } from "./types";
+import { loadRecentProjectHistory } from "@/codegen/history";
+import {
+  createE2BSandboxAdapter,
+  connectE2BSandboxAdapter,
+  type SandboxAdapter,
+} from "@/codegen/sandbox";
+import {
+  resolveLegacyFallbackModel,
+  resolveLegacyProjectModel,
+  type ProjectModelKey,
+} from "@/codegen/models";
 
 interface AgentState {
   summary: string;
   files: { [path: string]: string };
 }
 
+function toAgentMessages(history: Awaited<ReturnType<typeof loadRecentProjectHistory>>): Message[] {
+  return history.map((message) => ({
+    type: "text",
+    role: message.role,
+    content: message.content,
+  }));
+}
+
+function createSandboxTools(sandbox: SandboxAdapter) {
+  return [
+    createTool({
+      name: "terminal",
+      description: "Use the terminal to run commands",
+      parameters: z.object({
+        command: z.string(),
+      }),
+      handler: async ({ command }, { step }) => {
+        return await step?.run("terminal", async () => {
+          return sandbox.runCommand(command);
+        });
+      },
+    }),
+    createTool({
+      name: "createOrUpdateFiles",
+      description: "Create or update files in the sandbox",
+      parameters: z.object({
+        files: z.array(
+          z.object({
+            path: z.string(),
+            content: z.string(),
+          }),
+        ),
+      }),
+      handler: async ({ files }, { step, network }: Tool.Options<AgentState>) => {
+        const newFiles = await step?.run("createOrUpdateFiles", async () => {
+          try {
+            const updatedFiles = network.state.data.files || {};
+            await sandbox.writeFiles(files);
+
+            for (const file of files) {
+              updatedFiles[file.path] = file.content;
+            }
+
+            return updatedFiles;
+          } catch (error) {
+            return "Error: " + error;
+          }
+        });
+
+        if (typeof newFiles === "object") {
+          network.state.data.files = newFiles;
+        }
+      },
+    }),
+    createTool({
+      name: "readFiles",
+      description: "Read files from the sandbx",
+      parameters: z.object({
+        files: z.array(z.string()),
+      }),
+      handler: async ({ files }, { step }) => {
+        return await step?.run("readFiles", async () => {
+          try {
+            const contents = await sandbox.readFiles(files);
+            return JSON.stringify(contents);
+          } catch (error) {
+            return "Error: " + error;
+          }
+        });
+      },
+    }),
+  ];
+}
+
 export const codeAgentFunction = inngest.createFunction(
   { id: "code-agent" },
   { event: "code-agent/run" },
   async ({ event, step }) => {
-
-    // --- Safe type-safe model selection ---
-    type ModelKey = "grok" | "codex" | "gemini";
-    const modelMapping: Record<ModelKey, string | undefined> = {
-      "grok": "x-ai/grok-4-fast:free",
-      "codex": "openai/gpt-5-codex",
-      "gemini": "google/gemini-2.5-flash",
-    };
-    const selectedModel = (event.data.model as ModelKey); // use model not selectedModel
-    const chosenModel = modelMapping[selectedModel];
-
-
-    // DEBUGGING
-    // if (!chosenModel) {
-    //   throw new Error(`Selected model "${selectedModel}" is not configured in environment variables!`);
-    // }
+    const selectedModel = event.data.model as ProjectModelKey | undefined;
+    const chosenModel = resolveLegacyProjectModel(selectedModel);
     
     const sandboxId = await step.run("get-sandbox-id", async () => {
-      const sandbox = await Sandbox.create("vedant-lovable-test-1");
-      await sandbox.setTimeout(SANDBOX_TIMEOUT);
-      return sandbox.sandboxId;
+      const adapter = await createE2BSandboxAdapter();
+      return adapter.id;
     });
+    const sandbox = await connectE2BSandboxAdapter(sandboxId);
 
     const previousMessages = await step.run("get-previous-messages", async () => {
-      const formattedMessages: Message[] = [];
-    
-      const messages = await prisma.message.findMany({
-        where: {
-          projectId: event.data.projectId,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 5,
-      });
-
-      for (const message of messages) {
-        formattedMessages.push({
-          type: "text",
-          role: message.role === "ASSISTANT" ? "assistant" : "user",
-          content: message.content,
-        });
-      }
-
-      return formattedMessages.reverse();
+      const history = await loadRecentProjectHistory(event.data.projectId, 5);
+      return toAgentMessages(history);
     });
 
     const state = createState<AgentState>({
@@ -82,101 +132,13 @@ export const codeAgentFunction = inngest.createFunction(
       description: "An expert coding angent",
       system: PROMPT,
       model: openai({
-        model: chosenModel ?? "openai/gpt-oss-120b:free",
+        model: chosenModel,
         apiKey: process.env.OPENAI_API_KEY,
         baseUrl: process.env.OPENAI_API_BASE,
         defaultParameters: { temperature: 0.1 },
       }),
 
-      tools: [
-        createTool({
-          name: "terminal",
-          description: "Use the terminal to run commands",
-          parameters: z.object({
-            command: z.string(),
-          }),
-          handler: async ({ command }, { step }) => {
-            return await step?.run("terminal", async () => {
-              const buffers = { stdout: "", stderr: "" };
-              
-              try {
-                const sandbox = await getSandboxId(sandboxId);
-                const result = await sandbox.commands.run(command, {
-                  onStdout: (data: string) => {
-                    buffers.stdout += data;
-                  },
-                  onStderr: (data: string) => {
-                    buffers.stderr += data;
-                  }
-                });
-                return result.stdout
-              } catch (e) {
-                console.error(
-                  `Command failed: ${e} \nstddout: ${buffers.stdout}\nstderr: ${buffers.stderr}`,
-                );
-                return `Command failed: ${e} \nstddout: ${buffers.stdout}\nstderr: ${buffers.stderr}`;
-              }
-            });
-          },
-        }),
-
-        createTool({
-          name: "createOrUpdateFiles",
-          description: "Create or update files in the sandbox",
-          parameters: z.object({
-            files: z.array(
-              z.object({
-                path: z.string(),
-                content: z.string(),
-              }),
-            ),
-          }),
-          handler: async ({ files }, { step, network }: Tool.Options<AgentState>) => {
-            const newFiles = await step?.run("createOrUpdateFiles", async () => {
-              try{
-                const updatedFiles = network.state.data.files || {};
-                const sandbox = await getSandboxId(sandboxId);
-                
-                for (const file of files) {
-                  await sandbox.files.write(file.path, file.content);
-                  updatedFiles[file.path] = file.content;
-                }
-                
-                return updatedFiles;
-              } catch (e) {
-                return "Error: " + e;
-              }
-            });
-
-            if (typeof newFiles == "object") {
-              network.state.data.files = newFiles;
-            }
-          },
-        }),
-        
-        createTool({
-          name: "readFiles",
-          description: "Read files from the sandbx",
-          parameters: z.object({
-            files: z.array(z.string()),
-          }),
-          handler: async ({ files }, { step }) => {
-            return await step?.run("readFiles", async () => {
-              try {
-                const sandbox = await getSandboxId(sandboxId);
-                const contents = [];
-                for (const file of files) {
-                  const content = await sandbox.files.read(file);
-                  contents.push({ path: file, content });
-                }
-                return JSON.stringify(contents);
-              } catch (e) {
-                return "Error: " + e;
-              }
-            });
-          },
-        })
-      ],
+      tools: createSandboxTools(sandbox),
       lifecycle: {
        onResponse: async ({ result, network }) => {
         const lastAssistantMessageText = lastAssistantTextMessageContent(result);
@@ -213,7 +175,7 @@ export const codeAgentFunction = inngest.createFunction(
       description: "A fragment title generator",
       system: FRAGMENT_TITLE_PROMPT,
       model: openai({
-        model: process.env.OPENAI_FREE2_MODEL ?? "openai/gpt-oss-120b:free",
+        model: resolveLegacyFallbackModel(),
         apiKey: process.env.OPENAI_API_KEY,
         baseUrl: process.env.OPENAI_API_BASE,
         defaultParameters: { temperature: 0.1 },
@@ -225,7 +187,7 @@ export const codeAgentFunction = inngest.createFunction(
       description: "A response generator",
       system: RESPONSE_PROMPT,
       model: openai({
-        model: process.env.OPENAI_FREE2_MODEL ?? "openai/gpt-oss-120b:free",
+        model: resolveLegacyFallbackModel(),
         apiKey: process.env.OPENAI_API_KEY,
         baseUrl: process.env.OPENAI_API_BASE,
         defaultParameters: { temperature: 0.1 },
@@ -239,9 +201,7 @@ export const codeAgentFunction = inngest.createFunction(
       !result.state.data.summary || Object.keys(result.state.data.files || {}).length === 0;
 
     const sandboxUrl = await step.run("get-sandbox-url", async () => {
-      const sandbox = await getSandboxId(sandboxId);
-      const host = sandbox.getHost(3000);
-      return `https://${host}`;
+      return sandbox.getPreviewUrl(3000);
     });
 
     await step.run("save-result", async() => {
