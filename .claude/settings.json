@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/vedant/.claude/**)",
+      "Bash(npx vitest *)",
+      "Bash(bun run *)"
+    ],
+    "additionalDirectories": [
+      "/Users/vedant/.claude"
+    ]
+  }
+}
