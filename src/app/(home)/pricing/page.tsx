@@ -2,21 +2,21 @@
 
 import { Check, Shield, Cpu, Gauge, Headphones, Crown, ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 
 const PricingSection = () => {
   const [isYearly, setIsYearly] = useState(false);
   const [focusedPlan, setFocusedPlan] = useState<string | null>(null);
-  const { isSignedIn, isLoaded } = useUser();
+  const { data: session, isPending } = useSession();
+  const isSignedIn = !!session?.user;
   const router = useRouter();
 
   const handleGetStarted = () => {
     router.push("/sign-up");
   };
 
-  // Loading state while checking authentication
-  if (!isLoaded) {
+  if (isPending) {
     return (
       <div className="flex justify-center items-center min-h-[400px]">
         <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />

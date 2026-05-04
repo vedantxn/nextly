@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Fragment } from "@prisma/client";
+import type { Fragment } from "@/lib/types";
 import { AlertTriangleIcon, ExternalLinkIcon, Loader2, MonitorIcon } from "lucide-react";
 import { useState, useCallback } from "react";
 

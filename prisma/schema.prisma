@@ -4,17 +4,97 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
-model Project {
-  id String @id @default(uuid())
-  name String
-  userId String
+// ─── Better Auth tables ─────────────────────────────────────
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  role          String    @default("user")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+  projects Project[]
+  usage    Usage?
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  userId                String
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("verification")
+}
+
+// ─── App tables ─────────────────────────────────────────────
+
+enum Visibility {
+  PUBLIC
+  PRIVATE
+}
+
+model Project {
+  id         String     @id @default(uuid())
+  userId     String
+  name       String
+  visibility Visibility @default(PRIVATE)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages Message[]
+
+  @@index([userId])
+  @@index([updatedAt])
+  @@map("project")
 }
 
 enum MessageRole {
@@ -28,36 +108,55 @@ enum MessageType {
 }
 
 model Message {
-  id        String     @id @default(uuid())
-  content   String
-
+  id        String      @id @default(uuid())
+  projectId String
   role      MessageRole
   type      MessageType
+  content   String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  
-  projectId String
-  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  fragment  Fragment?
+  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fragment Fragment?
+
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("message")
 }
 
 model Fragment {
   id         String   @id @default(uuid())
   messageId  String   @unique
-  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  
   sandboxUrl String
   title      String
   files      Json
-
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@map("fragment")
 }
 
 model Usage {
-  key String @id
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  points      Int      @default(0)
+  periodStart DateTime @default(now())
+  periodEnd   DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("usage")
+}
+
+model RateLimiter {
+  key    String    @id
   points Int
   expire DateTime?
+
+  @@map("rate_limiter")
 }

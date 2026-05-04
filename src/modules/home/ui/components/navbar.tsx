@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { SignedIn, SignedOut, SignUpButton } from "@clerk/nextjs";
+import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { UserControl } from "@/components/user-control";
 import { useScroll } from "@/hooks/use-scroll";
@@ -21,6 +21,7 @@ import { ChevronDown } from "lucide-react";
 export const Navbar = () => {
   const isScrolled = useScroll();
   const [mounted, setMounted] = useState(false);
+  const { data: session } = useSession();
 
   useEffect(() => {
     setMounted(true);
@@ -174,14 +175,13 @@ export const Navbar = () => {
 
       {/* Right side */}
       <div className="flex items-center ml-auto gap-2">
-        <SignedOut>
-          <SignUpButton>
-            <InteractiveHoverButton text="Sign Up" />
-          </SignUpButton>
-        </SignedOut>
-        <SignedIn>
+        {session?.user ? (
           <UserControl />
-        </SignedIn>
+        ) : (
+          <a href="/sign-up">
+            <InteractiveHoverButton text="Sign Up" />
+          </a>
+        )}
       </div>
     </div>
   );

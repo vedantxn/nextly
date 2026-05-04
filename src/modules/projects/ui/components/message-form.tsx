@@ -14,7 +14,7 @@ import { useTRPC } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Form, FormField } from "@/components/ui/form";
 import { Usage } from "./usage";
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "@/lib/auth-client";
 import { createPortal } from "react-dom";
 
 interface Props {
@@ -51,8 +51,7 @@ const formSchema = z.object({
 export const MessageForm = ({ projectId }: Props) => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const { has } = useAuth();
-  const hasProAccess = has?.({ plan: "pro" });
+  const { data: session } = useSession();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -161,7 +160,7 @@ export const MessageForm = ({ projectId }: Props) => {
                       style={{ position: "absolute" }}
                     >
                       {models.map((model) => {
-                        const disabled = model.isPro && !hasProAccess;
+                        const disabled = false;
                         const isBest = model.name === "codex";
 
                         return (

@@ -1,47 +1,45 @@
 import { RateLimiterPrisma } from "rate-limiter-flexible";
 import prisma from "./db";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
-const FREE_POINTS = 100;
-const PRO_POINTS = 100;
-const DURATION = 30 * 24 * 60 *60;  //30 days
+const POINTS = 100;
+const DURATION = 30 * 24 * 60 * 60; // 30 days
 const GENERATION_COST = 1;
 
 export async function getUsageTracker() {
-
-  const { has } = await auth();
-  const hasPremiumAccess = has({ plan: "pro"})
-
   const usageTracker = new RateLimiterPrisma({
     storeClient: prisma,
-    tableName: "Usage",
-    points: hasPremiumAccess ? PRO_POINTS : FREE_POINTS,
+    tableName: "RateLimiter",
+    points: POINTS,
     duration: DURATION,
   });
 
   return usageTracker;
-};
+}
 
-export async function consumeCredits () {
-  const { userId } = await auth()
+async function getAuthenticatedUserId(): Promise<string> {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-  if (!userId) {
+  if (!session?.user?.id) {
     throw new Error("Unauthorized");
   }
 
+  return session.user.id;
+}
+
+export async function consumeCredits() {
+  const userId = await getAuthenticatedUserId();
   const usageTracker = await getUsageTracker();
   const result = await usageTracker.consume(userId, GENERATION_COST);
   return result;
-};
+}
 
 export async function getUsageStatus() {
-  const { userId } = await auth()
-
-  if (!userId) {
-    throw new Error("Unauthorized");
-  }
-
+  const userId = await getAuthenticatedUserId();
   const usageTracker = await getUsageTracker();
-  const result = await usageTracker.get(userId);        //getPoints(userId)
+  const result = await usageTracker.get(userId);
   return result;
 }

@@ -5,7 +5,7 @@ import { useTRPC } from "@/trpc/client";
 import { MessageCard } from "./message-card";
 import { MessageForm } from "./message-form";
 import { useRef, useEffect } from "react";
-import { Fragment } from "@prisma/client";
+import type { Fragment } from "@/lib/types";
 import { MessageLoading } from "./message-loading";
 
 interface Props {
