@@ -77,9 +77,9 @@ export const MessageForm = ({ projectId }: Props) => {
 
   // MODEL SELECTOR
   const models = [
-    { name: "codex", label: "GPT-5 (Codex)", icon: <SiOpenai />, isPro: true, description: "Best for deep reasoning" },
-    { name: "gemini", label: "Gemini-2.5 Flash", icon: <SiGoogle />, isPro: true, description: "Google-powered fast model" },
-    { name: "grok", label: "Grok 4 Fast", icon: null, isPro: false, description: "Lightweight and free, suitable for everyone" },
+    { name: "codex", label: "GPT-5", icon: <SiOpenai />, isPro: true, description: "Best for deep reasoning" },
+    { name: "gemini", label: "GPT-4.1 Mini", icon: <SiGoogle />, isPro: true, description: "Fast balanced general model" },
+    { name: "grok", label: "GPT-5 Mini", icon: null, isPro: false, description: "Fastest default OpenAI model" },
   ];
 
   const [selectedModel, setSelectedModel] = useState(models[2]);
@@ -186,8 +186,8 @@ export const MessageForm = ({ projectId }: Props) => {
                             </div>
                             <span className="text-[8px] text-muted-foreground pl-4 mt-0.5">
                               {model.name === "codex" && "Best for deep reasoning"}
-                              {model.name === "gemini" && "Google-powered fast model"}
-                              {model.name === "grok" && "Lightweight and free"}
+                              {model.name === "gemini" && "Fast balanced general model"}
+                              {model.name === "grok" && "Fastest default OpenAI model"}
                             </span>
                           </button>
                         );

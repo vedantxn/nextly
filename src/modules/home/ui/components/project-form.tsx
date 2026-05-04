@@ -92,15 +92,15 @@ export const ProjectForm = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<Model>({
     name: "grok",
-    label: "Grok 4 Fast",
+    label: "GPT-5 Mini",
     icon: null,
     isPro: false,
   });
 
   const models: Model[] = [
-    { name: "grok", label: "Grok 4 Fast", icon: null, isPro: false },
-    { name: "codex", label: "GPT-5 (Codex)", icon: <SiOpenai />, isPro: true },
-    { name: "gemini", label: "Gemini-2.5 Flash", icon: <FcGoogle />, isPro: true },
+    { name: "grok", label: "GPT-5 Mini", icon: null, isPro: false },
+    { name: "codex", label: "GPT-5", icon: <SiOpenai />, isPro: true },
+    { name: "gemini", label: "GPT-4.1 Mini", icon: <FcGoogle />, isPro: true },
   ];
 
   type SubmitData = z.infer<typeof formSchema> & { model: "grok" | "codex" | "gemini" };
@@ -248,8 +248,8 @@ export const ProjectForm = () => {
                           </div>
                           <span className="text-[10px] text-muted-foreground pl-6 mt-0.5">
                             {model.name === "codex" && "Best for deep reasoning"}
-                            {model.name === "gemini" && "Google-powered fast model"}
-                            {model.name === "grok" && "Lightweight and free"}
+                            {model.name === "gemini" && "Fast balanced general model"}
+                            {model.name === "grok" && "Fastest default OpenAI model"}
                           </span>
                         </button>
                       );
