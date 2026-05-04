@@ -62,6 +62,7 @@
     "react-textarea-autosize": "^8.5.9",
     "react-tsparticles": "^2.12.2",
     "react-use-measure": "^2.1.7",
+    "resend": "^6.12.2",
     "server-only": "^0.0.1",
     "sonner": "^2.0.6",
     "superjson": "^2.2.2",
