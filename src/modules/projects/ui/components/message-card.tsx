@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, MessageType, MessageRole } from "@prisma/client";
+import type { Fragment, MessageType, MessageRole } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";

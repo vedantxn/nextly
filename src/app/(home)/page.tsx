@@ -8,15 +8,15 @@ import BlurText from "@/components/21stdev/blur-text";
 import { HowItWorksSection } from "@/modules/home/ui/components/tagline";
 import ComparisonFeature from "@/modules/home/ui/components/compariosn";
 import { Loader2 } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "@/lib/auth-client";
 import { ProjectsList } from "@/modules/home/ui/components/projects-list";
 import { Features } from "@/modules/home/ui/components/features-bento";
 
 const Page = () => {
-  const { isSignedIn, isLoaded } = useUser();
+  const { data: session, isPending } = useSession();
+  const isSignedIn = !!session?.user;
 
-  // Show loading state while Clerk is initializing
-  if (!isLoaded) {
+  if (isPending) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="animate-spin" />

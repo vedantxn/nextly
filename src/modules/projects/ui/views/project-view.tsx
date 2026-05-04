@@ -4,15 +4,13 @@ import { ResizablePanel, ResizablePanelGroup, ResizableHandle } from "@/componen
 import { MessagesContainer } from "../components/messages-container";
 import { Suspense, useState } from "react";
 import { FragmentWeb } from "../components/fragment-web";
-import { Fragment } from "@prisma/client";
+import type { Fragment } from "@/lib/types";
 import { ProjectHeader } from "../components/project-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EyeIcon, CodeIcon, CrownIcon, Loader2, AlertCircle, RocketIcon, RefreshCcwIcon, ExternalLinkIcon } from "lucide-react";
+import { EyeIcon, CodeIcon, Loader2, AlertCircle, RocketIcon, RefreshCcwIcon, ExternalLinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { FileExplorer } from "@/components/file-explorer";
 import { UserControl } from "@/components/user-control";
-import { useAuth } from "@clerk/nextjs";
 import { ErrorBoundary } from "react-error-boundary";
 
 const LoadingState = ({ message }: { message: string }) => (
@@ -42,10 +40,6 @@ interface Props {
 }
 
 export const ProjectView = ({ projectId }: Props) => {
-    const { has } = useAuth();
-    const hasProAccess = has?.({ plan: "pro" });
-    const isFreeTier = has?.({ plan: "free_user" });
-
     const [activeFragment, setActiveFragment] = useState<Fragment | null>(null);
     const [tabState, setTabState] = useState<"preview" | "code">("preview");
     const [copied, setCopied] = useState(false);
@@ -162,18 +156,6 @@ export const ProjectView = ({ projectId }: Props) => {
                             )}
 
                             <div className="flex items-center gap-x-3 flex-shrink-0">
-                                {isFreeTier && !hasProAccess && (
-                                    <Button 
-                                        asChild 
-                                        size="sm" 
-                                        className="group bg-primary text-primary-foreground shadow-md transition-all duration-300 hover:bg-primary/90 hover:shadow-lg hover:scale-105"
-                                    >
-                                        <Link href="/pricing">
-                                            <CrownIcon className="mr-2 h-4 w-4 transition-transform group-hover:rotate-12" />
-                                            <span>Upgrade</span>
-                                        </Link>
-                                    </Button>
-                                )}
                                 <div className="transition-transform hover:scale-105">
                                     <UserControl />
                                 </div>

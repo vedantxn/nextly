@@ -13,7 +13,7 @@ import { useTRPC } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Form, FormField } from "@/components/ui/form";
 import { useRouter } from "next/navigation";
-import { useClerk, useAuth } from "@clerk/nextjs";
+import { useSession } from "@/lib/auth-client";
 import { SiOpenai } from "react-icons/si";
 import { FcGoogle } from "react-icons/fc";
 import { PoweredBy } from "./prompt-su";
@@ -61,10 +61,7 @@ export const ProjectForm = () => {
   const router = useRouter();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const clerk = useClerk();
-  const { has } = useAuth();
-
-  const hasProAccess = has?.({ plan: "pro" }) ?? false;
+  const { data: session } = useSession();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -81,7 +78,7 @@ export const ProjectForm = () => {
       },
       onError: (error) => {
         toast.error(error.message);
-        if (error.data?.code === "UNAUTHORIZED") clerk.openSignIn();
+        if (error.data?.code === "UNAUTHORIZED") router.push("/sign-in");
         if (error.data?.code === "TOO_MANY_REQUESTS") router.push("/pricing");
       },
     })
@@ -167,11 +164,7 @@ export const ProjectForm = () => {
                 ref={buttonRef}
                 className={cn(
                   "relative group flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all backdrop-blur-md border shadow-sm cursor-pointer",
-                  selectedModel.isPro
-                    ? hasProAccess
-                      ? "bg-primary text-primary-foreground border-primary/50 shadow-md scale-105"
-                      : "bg-white/20 dark:bg-white/10 border-white/20 text-muted-foreground cursor-not-allowed"
-                    : "bg-white/20 dark:bg-white/10 border-white/20 text-muted-foreground hover:bg-white/30"
+                  "bg-white/20 dark:bg-white/10 border-white/20 text-muted-foreground hover:bg-white/30"
                 )}
                 onClick={() => setDropdownOpen((prev) => !prev)}
               >
@@ -224,7 +217,7 @@ export const ProjectForm = () => {
                     }}
                   >
                     {models.map((model) => {
-                      const disabled = model.isPro && !hasProAccess;
+                      const disabled = false;
                       const isBest = model.name === "codex";
 
                       return (
