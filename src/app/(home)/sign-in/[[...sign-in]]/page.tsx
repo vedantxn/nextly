@@ -77,6 +77,10 @@ export default function SignInPage() {
             </button>
           </form>
 
+          <a href="/forgot-password" className="text-sm text-muted-foreground underline">
+            Forgot password?
+          </a>
+
           <p className="text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
             <a href="/sign-up" className="text-primary underline">
