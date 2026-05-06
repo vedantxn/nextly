@@ -12,7 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^3.0.58",
+    "@ai-sdk/openai": "^3.0.60",
     "@e2b/code-interpreter": "^1.5.1",
     "@gsap/react": "^2.1.2",
     "@hookform/resolvers": "^5.2.0",
