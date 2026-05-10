@@ -1,6 +1,7 @@
 import { openai } from "@ai-sdk/openai";
 import { generateText, stepCountIs, tool, type ModelMessage } from "ai";
 import z from "zod";
+import { createHook } from "workflow";
 import {
   FRAGMENT_TITLE_PROMPT,
   PROMPT,
@@ -164,6 +165,21 @@ function createAgentTools(
         const success = result.exitCode === 0;
         emit({ type: "tool_result", tool: "installPackage", result: { success, packages: safe } });
         return { success, output: result.stdout.slice(0, 300) };
+      },
+    }),
+
+    askUser: tool({
+      description: "Ask the user a clarifying question and wait for their answer. Use sparingly — only when the prompt is genuinely ambiguous and the answer will materially change what you build.",
+      inputSchema: z.object({
+        question: z.string().describe("The question to ask the user"),
+      }),
+      execute: async ({ question }) => {
+        // Create a workflow hook — this suspends the step until resumeHook is called
+        const hook = createHook<{ answer: string }>();
+        emit({ type: "ask_user", question, hookToken: hook.token });
+        // Await the hook — execution pauses here until the user responds via POST /api/generation/[jobId]/respond
+        const response = await hook;
+        return { answer: response.answer };
       },
     }),
 
