@@ -17,6 +17,7 @@ import { useSession } from "@/lib/auth-client";
 
 interface Props {
   projectId: string;
+  onJobCreated?: (jobId: string) => void;
 }
 
 const GlassEffect: React.FC<{ children: React.ReactNode; className?: string }> = ({
@@ -46,7 +47,7 @@ const formSchema = z.object({
     .max(1000, { message: "Message cannot be longer than 1000 characters" }),
 });
 
-export const MessageForm = ({ projectId }: Props) => {
+export const MessageForm = ({ projectId, onJobCreated }: Props) => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
@@ -61,13 +62,16 @@ export const MessageForm = ({ projectId }: Props) => {
 
   const createMessage = useMutation(
     trpc.messages.create.mutationOptions({
-      onSuccess: () => {
+      onSuccess: (data) => {
         form.reset();
         queryClient.invalidateQueries(trpc.messages.getMany.queryOptions({ projectId }));
         queryClient.invalidateQueries(
           trpc.generationJobs.latestForProject.queryOptions({ projectId })
         );
         queryClient.invalidateQueries(trpc.usage.status.queryOptions());
+        if (data.generationJobId) {
+          onJobCreated?.(data.generationJobId);
+        }
       },
       onError: () => toast.error("Failed to create message"),
     })
