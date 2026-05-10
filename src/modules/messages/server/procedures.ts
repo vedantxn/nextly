@@ -112,7 +112,7 @@ export const messagesRouter = createTRPCRouter({
         throw error;
       }
 
-      return createdMessage;
+      return { ...createdMessage, generationJobId: generationJob.id };
     }),
 });
 

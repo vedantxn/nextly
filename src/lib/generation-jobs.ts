@@ -74,3 +74,16 @@ export async function attachGenerationJobWorkflowRun(jobId: string, workflowRunI
     },
   });
 }
+
+export async function getGenerationJobById(jobId: string) {
+  return prisma.generationJob.findUnique({
+    where: { id: jobId },
+    select: {
+      id: true,
+      status: true,
+      workflowRunId: true,
+      projectId: true,
+      organizationId: true,
+    },
+  });
+}

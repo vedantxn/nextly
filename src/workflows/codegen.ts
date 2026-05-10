@@ -3,23 +3,25 @@ import {
   generateFragmentTitle,
   generateUserFacingResponse,
   runCodegenAgent,
+  type AgentStreamEvent,
+  type AgentStreamWriter,
 } from "@/codegen/runtime";
 import { loadRecentProjectHistory } from "@/codegen/history";
 import {
   createSandboxAdapter,
   connectSandboxAdapter,
 } from "@/codegen/sandbox";
-import { type ProjectModelKey } from "@/codegen/models";
 import {
   markGenerationJobCompleted,
   markGenerationJobFailed,
   markGenerationJobRunning,
 } from "@/lib/generation-jobs";
+import { getWritable } from "workflow";
 
 type CodegenWorkflowInput = {
   prompt: string;
   projectId: string;
-  model: ProjectModelKey | undefined;
+  model?: string;
   jobId?: string;
 };
 
@@ -60,12 +62,27 @@ async function runAgentStep(input: CodegenWorkflowInput, sandboxId: string) {
   const sandbox = await connectSandboxAdapter(sandboxId);
   const history = await loadRecentProjectHistory(input.projectId, 5);
 
-  return runCodegenAgent({
-    prompt: input.prompt,
-    history,
-    model: input.model,
-    sandbox,
-  });
+  // Get the workflow-native writable stream so the frontend can read events in real-time
+  const writable = getWritable<AgentStreamEvent>();
+  const writer = writable.getWriter();
+
+  const stream: AgentStreamWriter = {
+    write(event) {
+      // Fire-and-forget — we don't await so the agent loop isn't blocked by stream backpressure
+      writer.write(event).catch(() => {});
+    },
+  };
+
+  try {
+    return await runCodegenAgent({
+      prompt: input.prompt,
+      history,
+      sandbox,
+      stream,
+    });
+  } finally {
+    writer.close().catch(() => {});
+  }
 }
 
 async function getSandboxPreviewStep(sandboxId: string) {
@@ -141,6 +158,15 @@ export async function codegenWorkflow(input: CodegenWorkflowInput) {
 
     const summary = result.summary?.trim();
     const hasFiles = Object.keys(result.files).length > 0;
+
+    if (result.buildError) {
+      const errorMessage = "The app was generated but failed to build: " + result.buildError.slice(0, 500);
+      await saveAssistantErrorStep(input.projectId, errorMessage);
+      if (input.jobId) {
+        await markJobFailedStep(input.jobId, errorMessage);
+      }
+      return { url: sandboxUrl, title: "Fragment", files: result.files, summary: errorMessage };
+    }
 
     if (!summary || !hasFiles) {
       const errorMessage = summary || "The generation finished without producing files.";

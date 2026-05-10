@@ -9,6 +9,7 @@ const publicRoutes = [
   "/pricing",
   "/api/trpc",
   "/api/auth",
+  "/api/generation",
   "/.well-known/workflow",
   "/terms",
   "/privacy",
