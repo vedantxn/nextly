@@ -1,61 +1,83 @@
 import { Sandbox } from "e2b";
-import { SandboxAdapter, type SandboxFile, type SandboxReadResult } from "./types";
+import type { SandboxAdapter, SandboxFile, SandboxReadResult, CommandResult, DirectoryEntry } from "./types";
 
 const SANDBOX_TIMEOUT = 60_000 * 10 * 3;
 
-async function connectToSandbox(sandboxId: string) {
-  const sandbox = await Sandbox.connect(sandboxId);
-  await sandbox.setTimeout(SANDBOX_TIMEOUT);
-  return sandbox;
-}
-
 class E2BSandboxAdapter implements SandboxAdapter {
+  private _sandbox: Sandbox | null = null;
+
   constructor(public readonly id: string) {}
 
-  async runCommand(command: string) {
-    const buffers = { stdout: "", stderr: "" };
+  private async getSandbox(): Promise<Sandbox> {
+    if (!this._sandbox) {
+      this._sandbox = await Sandbox.connect(this.id);
+      await this._sandbox.setTimeout(SANDBOX_TIMEOUT);
+    }
+    return this._sandbox;
+  }
+
+  async runCommand(command: string): Promise<CommandResult> {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
 
     try {
-      const sandbox = await connectToSandbox(this.id);
+      const sandbox = await this.getSandbox();
       const result = await sandbox.commands.run(command, {
-        onStdout: (data: string) => {
-          buffers.stdout += data;
-        },
-        onStderr: (data: string) => {
-          buffers.stderr += data;
-        },
+        onStdout: (data: string) => { stdout.push(data); },
+        onStderr: (data: string) => { stderr.push(data); },
       });
 
-      return result.stdout;
+      return {
+        stdout: stdout.join(""),
+        stderr: stderr.join(""),
+        exitCode: result.exitCode,
+      };
     } catch (error) {
-      const details = `Command failed: ${error} \nstddout: ${buffers.stdout}\nstderr: ${buffers.stderr}`;
-      console.error(details);
-      return details;
+      return {
+        stdout: stdout.join(""),
+        stderr: stderr.join("") || String(error),
+        exitCode: 1,
+      };
     }
   }
 
-  async writeFiles(files: SandboxFile[]) {
-    const sandbox = await connectToSandbox(this.id);
+  async writeFile(path: string, content: string): Promise<void> {
+    const sandbox = await this.getSandbox();
+    await sandbox.files.write(path, content);
+  }
 
+  async readFile(path: string): Promise<string> {
+    const sandbox = await this.getSandbox();
+    return sandbox.files.read(path);
+  }
+
+  async listDirectory(path: string): Promise<DirectoryEntry[]> {
+    const sandbox = await this.getSandbox();
+    const entries = await sandbox.files.list(path);
+    return entries.map((entry) => ({
+      name: entry.name,
+      path: entry.path,
+      type: entry.type === "dir" ? "dir" : "file",
+    }));
+  }
+
+  async writeFiles(files: SandboxFile[]): Promise<void> {
     for (const file of files) {
-      await sandbox.files.write(file.path, file.content);
+      await this.writeFile(file.path, file.content);
     }
   }
 
   async readFiles(paths: string[]): Promise<SandboxReadResult[]> {
-    const sandbox = await connectToSandbox(this.id);
-    const contents: SandboxReadResult[] = [];
-
+    const results: SandboxReadResult[] = [];
     for (const path of paths) {
-      const content = await sandbox.files.read(path);
-      contents.push({ path, content });
+      const content = await this.readFile(path);
+      results.push({ path, content });
     }
-
-    return contents;
+    return results;
   }
 
-  async getPreviewUrl(port: number) {
-    const sandbox = await connectToSandbox(this.id);
+  async getPreviewUrl(port: number): Promise<string> {
+    const sandbox = await this.getSandbox();
     const host = sandbox.getHost(port);
     return `https://${host}`;
   }
@@ -68,6 +90,5 @@ export async function createE2BSandboxAdapter(template = "nextly-base-dev") {
 }
 
 export async function connectE2BSandboxAdapter(sandboxId: string) {
-  await connectToSandbox(sandboxId);
   return new E2BSandboxAdapter(sandboxId);
 }

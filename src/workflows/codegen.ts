@@ -9,7 +9,6 @@ import {
   createSandboxAdapter,
   connectSandboxAdapter,
 } from "@/codegen/sandbox";
-import { type ProjectModelKey } from "@/codegen/models";
 import {
   markGenerationJobCompleted,
   markGenerationJobFailed,
@@ -19,7 +18,7 @@ import {
 type CodegenWorkflowInput = {
   prompt: string;
   projectId: string;
-  model: ProjectModelKey | undefined;
+  model?: string;
   jobId?: string;
 };
 
@@ -63,7 +62,6 @@ async function runAgentStep(input: CodegenWorkflowInput, sandboxId: string) {
   return runCodegenAgent({
     prompt: input.prompt,
     history,
-    model: input.model,
     sandbox,
   });
 }
@@ -141,6 +139,15 @@ export async function codegenWorkflow(input: CodegenWorkflowInput) {
 
     const summary = result.summary?.trim();
     const hasFiles = Object.keys(result.files).length > 0;
+
+    if (result.buildError) {
+      const errorMessage = "The app was generated but failed to build: " + result.buildError.slice(0, 500);
+      await saveAssistantErrorStep(input.projectId, errorMessage);
+      if (input.jobId) {
+        await markJobFailedStep(input.jobId, errorMessage);
+      }
+      return { url: sandboxUrl, title: "Fragment", files: result.files, summary: errorMessage };
+    }
 
     if (!summary || !hasFiles) {
       const errorMessage = summary || "The generation finished without producing files.";
