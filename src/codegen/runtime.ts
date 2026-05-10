@@ -174,11 +174,16 @@ function createAgentTools(
         question: z.string().describe("The question to ask the user"),
       }),
       execute: async ({ question }) => {
-        // Create a workflow hook — this suspends the step until resumeHook is called
         const hook = createHook<{ answer: string }>();
         emit({ type: "ask_user", question, hookToken: hook.token });
-        // Await the hook — execution pauses here until the user responds via POST /api/generation/[jobId]/respond
-        const response = await hook;
+
+        // Race: user answers vs 5-minute auto-skip timeout
+        const ASK_TIMEOUT_MS = 5 * 60 * 1000;
+        const timeoutPromise = new Promise<{ answer: string }>((resolve) =>
+          setTimeout(() => resolve({ answer: "(no response — continue with your best judgment)" }), ASK_TIMEOUT_MS)
+        );
+
+        const response = await Promise.race([hook, timeoutPromise]);
         return { answer: response.answer };
       },
     }),

@@ -7,7 +7,7 @@ import { MessageForm } from "./message-form";
 import { useRef, useEffect, useState } from "react";
 import type { Fragment } from "@/lib/types";
 import { MessageLoading } from "./message-loading";
-import { GenerationStream } from "./generation-stream";
+import { GenerationStream, GenerationStreamErrorBoundary } from "./generation-stream";
 import { useGenerationStream } from "@/hooks/use-generation-stream";
 
 interface Props {
@@ -55,7 +55,7 @@ export const MessagesContainer = ({
   }, [latestGenerationJob, streamingJobId]);
 
   // Connect to the stream for the active job
-  const { state: streamState, respond } = useGenerationStream(streamingJobId);
+  const { state: streamState, respond, cancel } = useGenerationStream(streamingJobId);
 
   // When stream finishes, invalidate queries to load the final persisted message
   useEffect(() => {
@@ -117,11 +117,14 @@ export const MessagesContainer = ({
 
         {/* Show real-time stream when available */}
         {isStreaming && streamingJobId && (
-          <GenerationStream
-            state={streamState}
-            jobId={streamingJobId}
-            onRespond={(hookToken, answer) => respond(streamingJobId, hookToken, answer)}
-          />
+          <GenerationStreamErrorBoundary>
+            <GenerationStream
+              state={streamState}
+              jobId={streamingJobId}
+              onRespond={(hookToken, answer) => respond(streamingJobId, hookToken, answer)}
+              onCancel={() => cancel(streamingJobId)}
+            />
+          </GenerationStreamErrorBoundary>
         )}
 
         {/* Fallback: plain loading state when job is active but stream not connected yet */}
