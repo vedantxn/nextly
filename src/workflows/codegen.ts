@@ -3,6 +3,8 @@ import {
   generateFragmentTitle,
   generateUserFacingResponse,
   runCodegenAgent,
+  type AgentStreamEvent,
+  type AgentStreamWriter,
 } from "@/codegen/runtime";
 import { loadRecentProjectHistory } from "@/codegen/history";
 import {
@@ -14,6 +16,7 @@ import {
   markGenerationJobFailed,
   markGenerationJobRunning,
 } from "@/lib/generation-jobs";
+import { getWritable } from "workflow";
 
 type CodegenWorkflowInput = {
   prompt: string;
@@ -59,11 +62,27 @@ async function runAgentStep(input: CodegenWorkflowInput, sandboxId: string) {
   const sandbox = await connectSandboxAdapter(sandboxId);
   const history = await loadRecentProjectHistory(input.projectId, 5);
 
-  return runCodegenAgent({
-    prompt: input.prompt,
-    history,
-    sandbox,
-  });
+  // Get the workflow-native writable stream so the frontend can read events in real-time
+  const writable = getWritable<AgentStreamEvent>();
+  const writer = writable.getWriter();
+
+  const stream: AgentStreamWriter = {
+    write(event) {
+      // Fire-and-forget — we don't await so the agent loop isn't blocked by stream backpressure
+      writer.write(event).catch(() => {});
+    },
+  };
+
+  try {
+    return await runCodegenAgent({
+      prompt: input.prompt,
+      history,
+      sandbox,
+      stream,
+    });
+  } finally {
+    writer.close().catch(() => {});
+  }
 }
 
 async function getSandboxPreviewStep(sandboxId: string) {
