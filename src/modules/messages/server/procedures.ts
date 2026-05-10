@@ -47,7 +47,7 @@ export const messagesRouter = createTRPCRouter({
           .min(1, { message: "Message cannot be empty" })
           .max(1000, { message: "Message cannot be longer than 1000 characters" }),
         projectId: z.string().min(1, { message: "Project ID is required" }),
-        model: z.enum(["grok", "codex", "gemini"]), // <-- Added model
+        model: z.enum(["gpt-5.4"]),
       }),
     )
     .mutation(async ({ input, ctx }) => {

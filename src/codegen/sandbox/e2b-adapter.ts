@@ -61,7 +61,7 @@ class E2BSandboxAdapter implements SandboxAdapter {
   }
 }
 
-export async function createE2BSandboxAdapter(template = "vedant-lovable-test-1") {
+export async function createE2BSandboxAdapter(template = "nextly-base-dev") {
   const sandbox = await Sandbox.create(template);
   await sandbox.setTimeout(SANDBOX_TIMEOUT);
   return new E2BSandboxAdapter(sandbox.sandboxId);

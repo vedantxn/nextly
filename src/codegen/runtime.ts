@@ -81,7 +81,6 @@ async function generatePlainText(system: string, prompt: string) {
     model: openai(resolveFallbackModel()),
     system,
     prompt,
-    temperature: 0.1,
   });
 
   return text.trim();
@@ -106,7 +105,6 @@ export async function runCodegenAgent(input: {
     ],
     tools: createCodegenTools(input.sandbox, files),
     stopWhen: stepCountIs(15),
-    temperature: 0.1,
   });
 
   const summary = extractTaskSummary(result.text);

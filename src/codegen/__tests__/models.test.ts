@@ -6,19 +6,15 @@ import {
 } from "../models";
 
 describe("codegen model resolution", () => {
-  it("uses the configured OpenAI mapping for each project model key", () => {
-    expect(resolveProjectModel("grok")).toBe("gpt-5-mini");
-    expect(resolveProjectModel("codex")).toBe("gpt-5");
-    expect(resolveProjectModel("gemini")).toBe("gpt-4.1-mini");
+  it("resolves to gpt-5.4", () => {
+    expect(resolveProjectModel("gpt-5.4")).toBe("gpt-5.4");
   });
 
-  it("falls back to the default project model when none is provided", () => {
-    expect(resolveProjectModel(undefined)).toBe(
-      resolveProjectModel(DEFAULT_PROJECT_MODEL),
-    );
+  it("falls back to gpt-5.4 when none is provided", () => {
+    expect(resolveProjectModel(undefined)).toBe(DEFAULT_PROJECT_MODEL);
   });
 
-  it("uses a stable fallback OpenAI model", () => {
-    expect(resolveFallbackModel()).toBe("gpt-5-mini");
+  it("uses gpt-5.4 as the fallback model", () => {
+    expect(resolveFallbackModel()).toBe("gpt-5.4");
   });
 });

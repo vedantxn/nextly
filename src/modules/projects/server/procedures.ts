@@ -93,7 +93,7 @@ export const projectsRouter = createTRPCRouter({
         value: z.string()
           .min(1, "Prompt cannot be empty")
           .max(1000, "Prompt cannot be longer than 1000 characters"),
-        model: z.enum(["grok", "codex", "gemini"])
+        model: z.enum(["gpt-5.4"])
       }),
     )
     .mutation(async ({ input, ctx }) => {
